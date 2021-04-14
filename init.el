@@ -65,6 +65,7 @@
     irony
     company-irony
     rainbow-delimiters
+    google-c-style
     ))
 
 (let ((not-installed
@@ -210,7 +211,7 @@
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(package-selected-packages (quote (smart-jump material-theme better-defaults))))
+ '(package-selected-packages '(smart-jump material-theme better-defaults)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
@@ -400,6 +401,90 @@
 (add-to-list 'auto-mode-alist '("\\.launch" . nxml-mode))
 (add-to-list 'auto-mode-alist '("\\.yaml" . yaml-mode))
 (add-to-list 'auto-mode-alist '("\\.*rc" . sh-mode))
+
+
+;;
+;; elpy
+;;
+(elpy-enable)
+;; use flycheck
+(when (require 'flycheck nil t)
+  (remove-hook 'elpy-modules 'elpy-module-flymake)
+  (add-hook 'elpy-mode-hook 'flycheck-mode))
+
+
+
+
+
+
+;;
+;; irony
+;;
+(use-package irony
+  :defer t
+  :commands irony-mode
+  :init
+  (add-hook 'c-mode-hook 'irony-mode)
+  (add-hook 'c++-mode-hook 'irony-mode)
+  :config
+  ;; C言語用にコンパイルオプションを設定する.
+  (add-hook 'c-mode-hook
+            '(lambda ()
+               (setq irony-additional-clang-options '("-std=c11" "-Wall" "-Wextra"))))
+  ;; C++言語用にコンパイルオプションを設定する.
+  (add-hook 'c++-mode-hook
+            '(lambda ()
+               (setq irony-additional-clang-options '("-std=c++11" "-Wall" "-Wextra"))))
+  (add-hook 'irony-mode-hook 'irony-cdb-autosetup-compile-options)
+  ;; Windows環境でパフォーマンスを落とす要因を回避.
+  (when (boundp 'w32-pipe-read-delay)
+    (setq w32-pipe-read-delay 0))
+  ;; バッファサイズ設定(default:4KB -> 64KB)
+  (when (boundp 'w32-pipe-buffer-size)
+    (setq irony-server-w32-pipe-buffer-size (* 64 1024)))
+  )
+
+(use-package company-irony
+  :defer t
+  :config
+  ;; companyの補完のバックエンドにironyを使用する.
+  (add-to-list 'company-backends '(company-irony-c-headers company-irony))
+  )
+(require 'cc-mode)
+;; c-modeやc++-modeなどcc-modeベースのモード共通の設定
+(add-hook
+ 'c-mode-common-hook
+ (lambda ()
+   ;; k&rスタイルをベースにする
+   (c-set-style "k&r")
+   ;; スペースでインデントをする
+   (setq indent-tabs-mode nil)
+   ;; インデント幅を2にする
+   (setq c-basic-offset 2)
+   ;; 自動改行（auto-new-line）と
+   ;; 連続する空白の一括削除（hungry-delete）を
+   ;; 有効にする
+   (c-toggle-auto-hungry-state 1)
+   ;; CamelCaseの語でも単語単位に分解して編集する
+   ;; GtkWindow         => Gtk Window
+   ;; EmacsFrameClass   => Emacs Frame Class
+   ;; NSGraphicsContext => NS Graphics Context
+   (subword-mode 1)
+   ))
+
+(add-to-list 'auto-mode-alist '("\\.h\\'" . c++-mode))
+
+;; undo-tree
+(require 'undo-tree)
+(global-undo-tree-mode)
+
+(require 'google-c-style)
+(defun cc-mode-init ()
+  (google-set-c-style)
+  (setq indent-tabs-mode t)
+  (setq c-basic-offset 4)
+  (c-set-offset 'case-label 0)
+)
 
 
 ;;
